@@ -46,6 +46,27 @@ functions:
           event: s3:ObjectCreated:*
           rules:
             - suffix: .png
+  list:
+    handler: handler.s3_get_thumbnail_urls
+    events:
+      - http:
+          path: images/all
+          method: get
+          cors: true
+  get:
+    handler: handler.s3_get_item
+    events:
+      - http:
+          path: images/get/{id}
+          method: get
+          cors: true
+  delete:
+    handler: handler.s3_delete_item
+    events:
+      - http:
+          path: images/delete/{id}
+          method: delete
+          cors: true
 
 resources:
   Resources:
