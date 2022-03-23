@@ -1,10 +1,15 @@
+from datetime import datetime
 from io import BytesIO
+import json
+import uuid
 import boto3
 import os
 from PIL import ImageOps, Image
 
 s3 = boto3.client('s3')
 size = int(os.environ['THUMBNAIL_SIZE'])
+db_table = str(os.environ['DYNAMODB_TABLE'])
+dynamodb = boto3.resource('dynamodb', region_name=str(os.environ['REGION_NAME']))
 
 
 def get_s3_image(bucket, key):
@@ -42,7 +47,29 @@ def upload_to_s3(bucket, key, image, img_size):
 
     url = f"{s3.meta.endpoint_url}/{bucket}/{key}"
 
+    s3_save_thumbnail_url_to_dynamodb(url, img_size)
+
     return url
+
+
+def s3_save_thumbnail_url_to_dynamodb(url_path, img_size):
+    to_int = float(img_size * 0.53) / 1000
+    table = dynamodb.Table(db_table)
+    response = table.put_item(
+        Item={
+            'id': str(uuid.uuid4()),
+            'url': str(url_path),
+            'approxRedycedSize': str(to_int) + str(' KB'),
+            'created_at': str(datetime.now()),
+            'updated_at': str(datetime.now())
+        }
+    )
+
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps(response)
+    }
 
 
 def s3_thumbnail_generator(event, context):
